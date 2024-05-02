@@ -18,15 +18,20 @@ class DriveTrain:
     
     MAX_DUTY_CYCLE = 65535
     
-    def __init__(self, left_1_num, left_2_num, right_1_num, right_2_num, frequency=20000)-> None: 
+    def __init__(self, 
+                 left_1_pin_num, 
+                 left_2_pin_num, 
+                 right_1_pin_num, 
+                 right_2_pin_num, 
+                 frequency=20000)-> None: 
         """Initialize the DriveTrain object with the pins for the motors. Optionally 
         set the frequency of the PWM signal.
 
         Args:
-            left_1_num (int): first pin for left motor
-            left_2_num (int): second pin for left motor
-            right_1_num (int): first pin for right motor
-            right_2_num (int): second pin for right motor
+            left_1_pin_num (int): first pin for left motor
+            left_2_pin_num (int): second pin for left motor
+            right_1_pin_num (int): first pin for right motor
+            right_2_pin_num (int): second pin for right motor
             frequency (int, optional): frequency of PWM signal (Hz). Defaults to 20000.
         """
         

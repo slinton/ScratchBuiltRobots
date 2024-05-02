@@ -9,7 +9,7 @@ class BaseBot:
     def __init__(self, drive_train: DriveTrain)-> None:
         """Initialize the BaseBot object with a drive train."""
         
-        self.drive_train = drive_train
+        self._drive_train = drive_train
 
     def move(self, left_speed: int, right_speed: int)-> None:
         """Arbitrary motion, controlling the speed of each motor independently
@@ -19,7 +19,7 @@ class BaseBot:
             right_speed (int): speed of right motor, (-100 , +100)
         """
         
-        self.drive_train.move(left_speed, right_speed)
+        self._drive_train.move(left_speed, right_speed)
         
     def forward(self, speed: int)-> None:
         """Drive the robot forward at a given speed.
@@ -28,7 +28,7 @@ class BaseBot:
             speed (int): speed of the robot in the range (-100, +100)
         """
         
-        self.drive_train.forward(speed)
+        self._drive_train.forward(speed)
         
     def backward(self, speed: int)-> None:
         """Drive the robot backward at a given speed. Note that the same
@@ -38,7 +38,7 @@ class BaseBot:
             speed (int): backwards speed of the robot in the range (0-100)
         """
         
-        self.drive_train.backward(speed)    
+        self._drive_train.backward(speed)    
         
     def turn_left(self, speed: int)-> None:
         """Turn the robot left at a given speed.
@@ -47,7 +47,7 @@ class BaseBot:
             speed (int): speed of the robot in the range 0-100
         """
         
-        self.drive_train.turn_left(speed)  
+        self._drive_train.turn_left(speed)  
         
     def turn_right(self, speed: int)-> None:
         """Turn the robot right at a given speed.
@@ -56,9 +56,9 @@ class BaseBot:
             speed (int): speed of the robot in the range 0-100
         """
         
-        self.drive_train.turn_right(speed) 
+        self._drive_train.turn_right(speed) 
         
     def stop(self)-> None:
         """Stop the robot."""
         
-        self.drive_train.stop()
+        self._drive_train.stop()
