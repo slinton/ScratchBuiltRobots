@@ -36,10 +36,10 @@ class DriveTrain:
         """
         
         # Create the PWM objects for the motor driver
-        self.left_1 = PWM(Pin(left_1_num, Pin.OUT))
-        self.left_2 = PWM(Pin(left_2_num, Pin.OUT))
-        self.right_1 = PWM(Pin(right_1_num, Pin.OUT))
-        self.right_2 = PWM(Pin(right_2_num,Pin.OUT))
+        self.left_1 = PWM(Pin(left_1_pin_num, Pin.OUT))
+        self.left_2 = PWM(Pin(left_2_pin_num, Pin.OUT))
+        self.right_1 = PWM(Pin(right_1_pin_num, Pin.OUT))
+        self.right_2 = PWM(Pin(right_2_pin_num,Pin.OUT))
         
         # Set the frequency of the PWM signal
         self.left_1.freq(frequency)
