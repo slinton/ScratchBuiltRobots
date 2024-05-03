@@ -1,91 +1,131 @@
-# Rui Santos & Sara Santos - Random Nerd Tutorials
-# Complete project details at https://RandomNerdTutorials.com/raspberry-pi-pico-w-micropython-ebook/
+# June 2023
+# Bluetooth cores specification versio 5.4 (0x0D)
+# Bluetooth Remote Control
+# Kevin McAleer
+# KevsRobot.com
 
-from micropython import const
-import uasyncio as asyncio
 import aioble
 import bluetooth
-import struct
+import machine
+import uasyncio as asyncio
 
-# org.bluetooth.service.environmental_sensing
-_ENV_SENSE_UUID = bluetooth.UUID(0x181A)
-# org.bluetooth.characteristic.temperature
-_ENV_SENSE_TEMP_UUID = bluetooth.UUID(0x2A6E)
+# Bluetooth UUIDS can be found online at https://www.bluetooth.com/specifications/gatt/services/
 
-# Name of the peripheral you want to connect
-peripheral_name="RPi-Pico"
+_REMOTE_UUID = bluetooth.UUID(0x1848)
+_ENV_SENSE_UUID = bluetooth.UUID(0x1800) 
+_REMOTE_CHARACTERISTICS_UUID = bluetooth.UUID(0x2A6E)
 
-# Helper to decode the temperature characteristic encoding (sint16, hundredths of a degree).
-def _decode_temperature(data):
-    try:
-        if data is not None:
-            return struct.unpack("<h", data)[0] / 100
-    except Exception as e:
-        print("Error decoding temperature:", e)
-    return None
+led = machine.Pin("LED", machine.Pin.OUT)
+connected = False
+alive = False
 
-async def find_temp_sensor():
-    # Scan for 5 seconds, in active mode, with a very low interval/window (to
-    # maximize detection rate).
+async def find_remote():
+    # Scan for 5 seconds, in active mode, with very low interval/window (to
+    # maximise detection rate).
     async with aioble.scan(5000, interval_us=30000, window_us=30000, active=True) as scanner:
         async for result in scanner:
-            print(result.name())
-            # See if it matches our name and the environmental sensing service.
-            if result.name() == peripheral_name and _ENV_SENSE_UUID in result.services():
-                return result.device
+
+            # See if it matches our name
+            if result.name() == "server":
+                print("Found server")
+                for item in result.services():
+                    print (item)
+                if _ENV_SENSE_UUID in result.services():
+                    print("Found Robot Remote Service")
+                    return result.device
+            
     return None
 
-async def main():
-    while True:
-        device = await find_temp_sensor()
-        if not device:
-            print("Temperature sensor not found. Retrying...")
-            await asyncio.sleep_ms(5000)  # Wait for 5 seconds before retrying
-            continue
+async def blink_task():
+    """ Blink the LED on and off every second """
+    
+    toggle = True
+    
+    while True and alive:
+        led.value(toggle)
+        toggle = not toggle
+        # print(f'blink {toggle}, connected: {connected}')
+        if connected:
+            blink = 1000
+        else:
+            blink = 250
+        await asyncio.sleep_ms(blink)
 
-        try:
-            print("Connecting to", device)
-            connection = await device.connect()
-        except asyncio.TimeoutError:
-            print("Timeout during connection. Retrying...")
-            await asyncio.sleep_ms(5000)  # Wait for 5 seconds before retrying
-            continue
-
-        async with connection:
+async def peripheral_task():
+    print('starting peripheral task')
+    global connected
+    connected = False
+    device = await find_remote()
+    if not device:
+        print("Robot Remote not found")
+        return
+    try:
+        print("Connecting to", device)
+        connection = await device.connect()
+        
+    except asyncio.TimeoutError:
+        print("Timeout during connection")
+        return
+      
+    async with connection:
+        print("Connected")
+        connected = True
+        alive = True
+        while True and alive:
             try:
-                temp_service = await connection.service(_ENV_SENSE_UUID)
-                temp_characteristic = await temp_service.characteristic(_ENV_SENSE_TEMP_UUID)
+                robot_service = await connection.service(_REMOTE_UUID)
+                print(f'Robot service: {robot_service}')
+                control_characteristic = await robot_service.characteristic(_REMOTE_CHARACTERISTICS_UUID)
+                print(control_characteristic)
             except asyncio.TimeoutError:
-                print("Timeout discovering services/characteristics. Retrying...")
-                await asyncio.sleep_ms(5000)  # Wait for 5 seconds before retrying
-                continue
-
+                print("Timeout discovering services/characteristics")
+                return
+            
             while True:
-                try:
-                    temp_data = await temp_characteristic.read()
-                    if temp_data is not None:
-                        temp_deg_c = _decode_temperature(temp_data)
-                        if temp_deg_c is not None:
-                            print("Temperature: {:.2f}".format(temp_deg_c))
-                        else:
-                            print("Invalid temperature data")
-                    else:
-                        print("Error reading temperature: None")
-                except Exception as e:
-                    print("Error in main loop:", e)
-                    break  # Break out of the inner loop and attempt to reconnect
+                if control_characteristic == None:
+                    print('no characteristic')
+                    await asyncio.sleep_ms(10)
+                    return
+                
+                if control_characteristic != None:
+                    try:
+                        command = await control_characteristic.read()
 
-                await asyncio.sleep_ms(1000)
+                        if command == b'a':
+                            print("a button pressed")
+                        elif command == b'b':
+                            print("b button pressed")
+                        elif command == b'x':
+                            print("x button pressed")
+                        elif command == b'y':
+                            print("y button pressed")
+                        await asyncio.sleep_ms(1)
+                        
+                    except TypeError:
+                        print(f'something went wrong; remote disconnected?')
+                        connected = False
+                        alive = False
+                        return
+                    except asyncio.TimeoutError:
+                        print(f'something went wrong; timeout error?')
+                        connected = False
+                        alive = False
+                        return
+                    except asyncio.GattError:
+                        print(f'something went wrong; Gatt error - did the remote die?')
+                        connected = False
+                        alive = False
+                        return
+                await asyncio.sleep_ms(1)
+                
 
-# Create an Event Loop
-loop = asyncio.get_event_loop()
-# Create a task to run the main function
-loop.create_task(main())
-
-try:
-    # Run the event loop indefinitely
-    loop.run_forever()
-except Exception as e:
-    print('Error occured: ', e)
-except KeyboardInterrupt:
-    print('Program Interrupted by the user')
+async def main():
+    tasks = []
+    tasks = [
+        asyncio.create_task(blink_task()),
+        asyncio.create_task(peripheral_task()),
+    ]
+    await asyncio.gather(*tasks)
+    
+while True:
+    asyncio.run(main())
