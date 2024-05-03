@@ -71,8 +71,8 @@ async def remote_task():
             await asyncio.sleep_ms(1000)
             continue
         
-            button_characteristic.write(b"x")
-            button_characteristic.notify(connection,b"x")
+        button_characteristic.write(b"x")
+        button_characteristic.notify(connection,b"x")
         
 #         if button_a.read():
 #             print(f'Button A pressed, connection is: {connection}')
