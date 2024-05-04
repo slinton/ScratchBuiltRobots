@@ -3,6 +3,8 @@
 # Bluetooth cores specification versio 5.4 (0x0D)
 # This works with robot.py
 
+# Samples: https://github.com/micropython/micropython/tree/master/examples/bluetooth
+
 import sys
 
 import aioble
@@ -64,6 +66,7 @@ connected = False
 
 async def remote_task():
     """ Send the event to the connected device """
+    count = 0
 
     while True:
         if not connected:
@@ -71,8 +74,12 @@ async def remote_task():
             await asyncio.sleep_ms(1000)
             continue
         
-        button_characteristic.write(b"x")
-        button_characteristic.notify(connection,b"x")
+        message_str = f"count: {count}"
+        count = count + 1 if count < 100 else 0
+        
+        message = bytes(message_str,'utf-8')
+        button_characteristic.write(message)
+        button_characteristic.notify(connection,message)
         
 #         if button_a.read():
 #             print(f'Button A pressed, connection is: {connection}')
@@ -92,7 +99,7 @@ async def remote_task():
 #             button_characteristic.notify(connection,b"x")
 #         else:
 #             button_characteristic.write(b"!")
-        await asyncio.sleep_ms(10)
+        await asyncio.sleep_ms(1000)
             
 # Serially wait for connections. Don't advertise while a central is
 # connected.    
