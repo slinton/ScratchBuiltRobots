@@ -4,6 +4,7 @@
 import aioble
 import bluetooth
 import machine
+from micropython import const
 import uasyncio as asyncio
 
 _GENERIC_SERVICE_UUID = bluetooth.UUID(0x1848)
