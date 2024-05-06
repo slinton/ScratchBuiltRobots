@@ -103,22 +103,48 @@ async def remote_task():
             
 # Serially wait for connections. Don't advertise while a central is
 # connected.    
+# async def peripheral_task():
+#     print('peripheral task started')
+#     global connected, connection
+#     while True:
+#         connected = False
+#         async with await aioble.advertise(
+#             ADV_INTERVAL_MS, 
+#             name="KevsRobots", 
+#             appearance=_BLE_APPEARANCE_GENERIC_REMOTE_CONTROL, 
+#             services=[_ENV_SENSE_TEMP_UUID]
+#         ) as connection:
+#             print("Connection from", connection.device)
+#             connected = True
+#             print(f"connected: {connected}")
+#             await connection.disconnected()
+#             print(f'disconnected')
+            
 async def peripheral_task():
     print('peripheral task started')
     global connected, connection
     while True:
         connected = False
-        async with await aioble.advertise(
-            ADV_INTERVAL_MS, 
-            name="KevsRobots", 
-            appearance=_BLE_APPEARANCE_GENERIC_REMOTE_CONTROL, 
-            services=[_ENV_SENSE_TEMP_UUID]
-        ) as connection:
-            print("Connection from", connection.device)
-            connected = True
-            print(f"connected: {connected}")
-            await connection.disconnected()
-            print(f'disconnected')
+        try:
+            async with await aioble.advertise(
+                ADV_INTERVAL_MS, 
+                name="KevsRobots", 
+                appearance=_BLE_APPEARANCE_GENERIC_REMOTE_CONTROL, 
+                services=[_ENV_SENSE_TEMP_UUID]
+            ) as connection:
+                print("Connection from", connection.device)
+                connected = True
+                print(f"connected: {connected}")
+                await connection.disconnected()
+                print(f'disconnected')
+        except asyncio.CancelledError:
+            print('advertise cancelled')
+                
+        except Exception as e:
+            print('advertise exception:', e)
+                
+        finally:
+            await asyncio.sleep(1)
         
 
 async def blink_task():
