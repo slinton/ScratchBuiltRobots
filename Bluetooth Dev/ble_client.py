@@ -16,19 +16,18 @@ class BLEClient:
     
     def __init__(self,
                  server_name:str,
+                 receive_message_func = None,
+                 receive_interval_ms:int = 1000,
                  service_uuid=_GENERIC_SERVICE_UUID,
                  char_uuid=_GENERIC_CHAR_UUID)->None:
         self.server_name = server_name
+        self.receive_message_func = receive_message_func
+        self.receive_interval_ms = receive_interval_ms
         self.service_uuid = service_uuid
         self.char_uuid = char_uuid
         self.characteristic = None
-
         self.ready = False
         
-    async def receive_message2(self)->None:
-        while True:
-            print('tick')
-            await asyncio.sleep_ms(1000)
         
     async def receive_message(self)->None:
         print('receive message')
@@ -36,20 +35,23 @@ class BLEClient:
             if self.ready:
                 try:
                     command = await self.characteristic.read()
-                    print(command)
+                    command_str = command.decode('utf-8')
+                    print(command_str)
+                    if self.receive_message_func:
+                        self.receive_message_func(command_str)
                 except TypeError:
-                    print(f'something went wrong; remote disconnected?')
+                    print(f'something went wrong; server disconnected?')
                     self.ready = False
                 except asyncio.TimeoutError:
                     print(f'something went wrong; timeout error?')
                     self.ready = False
                 except asyncio.GattError:
-                    print(f'something went wrong; Gatt error - did the remote die?')
+                    print(f'something went wrong; Gatt error - did the server die?')
                     self.ready = False
                 except Exception as e:
                     print(f'receive_message exception: {e}')
                     self.ready = False
-            await asyncio.sleep_ms(1000)
+            await asyncio.sleep_ms(self.receive_interval_ms)
         
     async def start_ble(self)->None:
         print('start_ble')
@@ -91,7 +93,7 @@ class BLEClient:
         await asyncio.gather(*tasks)
 
 async def main():
-    client = BLEClient("KevsRobots")
+    client = BLEClient("BLE Test")
     await client.start()
     
 if __name__ == "__main__":

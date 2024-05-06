@@ -3,7 +3,6 @@
 #
 import aioble
 import bluetooth
-import machine
 from micropython import const
 import uasyncio as asyncio
 
@@ -14,13 +13,13 @@ _BLE_APPEARANCE_GENERIC_REMOTE_CONTROL = const(384)
 class BLEServer:
     def __init__(self,
                  name:str,
-                 update_func=None,
-                 update_interval_ms=1000,
+                 send_message_func=None,
+                 send_interval_ms=1000,
                  service_uuid=_GENERIC_SERVICE_UUID,
                  char_uuid=_GENERIC_CHAR_UUID)->None:
         self.name = name
-        self.update_func = update_func
-        self.update_interval_ms = update_interval_ms
+        self.send_message_func = send_message_func
+        self.send_interval_ms = send_interval_ms
         print(f'update_func = {self.update_func}')
         self.service_uuid = service_uuid
         self.char_uuid = char_uuid
@@ -61,14 +60,14 @@ class BLEServer:
         while True:
             if self.connected:
                 print('send_message')
-                message_str = 'hello'
-                if not self.update_func == None:
+                message_str = ''
+                if not self.send_message_func == None:
                     print('calling update_func')
-                    message_str = self.update_func()
+                    message_str = self.send_message_func()
                 message = bytearray(message_str, 'utf-8')
                 self.characteristic.write(message)
                 self.characteristic.notify(self.connection, message)
-            await asyncio.sleep_ms(self.update_interval_ms)
+            await asyncio.sleep_ms(self.send_interval_ms)
     
             
     async def start(self)->None:
@@ -82,7 +81,7 @@ class BLEServer:
     
     
 async def main()->None:
-    bleServer = BLEServer('KevsRobots')
+    bleServer = BLEServer('BLE Test')
     await bleServer.start()
     
     
