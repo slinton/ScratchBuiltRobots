@@ -4,10 +4,9 @@
 import aioble
 import bluetooth
 import uasyncio as asyncio
-from typing import Callable
 
 _GENERIC_SERVICE_UUID = bluetooth.UUID(0x1848) # data service UUID
-_GENERIC_CHAR_UUID = bluetooth.UUID(0x2A6E) # char
+_GENERIC_CHAR_UUID = bluetooth.UUID(0x2A6E) # characteristic UUID
 
 _REMOTE_CHARACTERISTICS_UUID = bluetooth.UUID(0x2A6E)
 
@@ -36,60 +35,49 @@ class BLEClient:
         self.receive_interval_ms = receive_interval_ms
         self.service_uuid = service_uuid
         self.char_uuid = char_uuid
+        self.connection = None
         self.characteristic = None
-        self.ready = False
         
-    async def receive_message(self)->None:
-        """Receive a message from the server. This function is callled periodically
-        """
-        print('receive message')
-        while True:
-            if self.ready:
-                try:
-                    command = await self.characteristic.read()
-                    command_str = command.decode('utf-8')
-                    print(command_str)
-                    if self.receive_message_func:
-                        self.receive_message_func(command_str)
-                except TypeError:
-                    print(f'something went wrong; server disconnected?')
-                    self.ready = False
-                except asyncio.TimeoutError:
-                    print(f'something went wrong; timeout error?')
-                    self.ready = False
-                except asyncio.GattError:
-                    print(f'something went wrong; Gatt error - did the server die?')
-                    self.ready = False
-                except Exception as e:
-                    print(f'receive_message exception: {e}')
-                    self.ready = False
-            await asyncio.sleep_ms(self.receive_interval_ms)
+    def start(self)->None:
+        asyncio.run(self.run_loop())
         
-    async def start_ble(self)->None:
-        """Start the BLE client and attempt connect to a server if it is not already connected.
-        """
-        print('start_ble')
+    async def run_loop(self)->None:
         while True:
-            if not self.ready:
-                print('attempting to start ble')
-                try:
-                    device = await self.find_server()
-                    print(device)
-                    connection = await device.connect()
-                    print(connection)
-                    service = await connection.service(self.service_uuid)
-                    print(service)
-                    self.characteristic = await service.characteristic(self.char_uuid)
-                    print(self.characteristic)
-                    if not self.characteristic == None:
-                        self.ready = True
-                        print(f'self.ready = {self.ready}')
-                except asyncio.TimeoutError:
-                    print("Timeout during connection")
-                except Exception as e:
-                    print(f'start_ble exception: {e}')
-            await asyncio.sleep_ms(1000)
+            try:
+                if self.is_connected():
+                    await self.receive_message()
+                    await asyncio.sleep_ms(self.receive_interval_ms)
+                else:
+                    await self.connect_to_server()
+            except Exception as e:
+                print(f'Exception: {e}')
+                self.connection = None
+        
+    def is_connected(self)->bool:
+        return not self.connection == None and self.connection.is_connected() 
+        
+
                 
+    async def receive_message(self)->None:
+        message = await self.characteristic.read()
+        message_str = message.decode('utf-8')
+        print(f'Receive message: {message_str}')
+        
+        if self.receive_message_func:
+            self.receive_message_func(message_str)
+        
+                
+    async def connect_to_server(self)->None:
+        device = await self.find_server()
+                    
+        self.connection = await device.connect()
+        print(f'Connection: {self.connection}')
+                    
+        service = await self.connection.service(self.service_uuid)
+        print(f'Service: {service}')
+                    
+        self.characteristic = await service.characteristic(self.char_uuid)
+        print(f'Characteristic: {self.characteristic}')
         
     async def find_server(self):
         """Find the server with the name server_name and service_uuid.
@@ -98,29 +86,15 @@ class BLEClient:
             device: server
         """
         while True:
+            print('Scanning for server...', end='')
             async with aioble.scan(5000, interval_us=30_000, window_us=30_000, active=True) as scanner:
                 async for result in scanner:
                     if result.name() == self.server_name and self.service_uuid in result.services():
+                        print(f'found: {result.name()}')
                         return result.device
+            await asyncio.sleep_ms(100)
     
-    async def start(self)->None:
-        """Start the BLE client. This function creates two tasks: start_ble and receive_message.
-        """
-        print('start')
-        tasks = [
-            asyncio.create_task(self.start_ble()),
-            asyncio.create_task(self.receive_message())
-        ]
-        await asyncio.gather(*tasks)
 
-
-
-async def main():
-    client = BLEClient("BLE Test")
-    await client.start()
-    
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except:
-        print('End')
+    client = BLEClient("BLE Test")
+    client.start()

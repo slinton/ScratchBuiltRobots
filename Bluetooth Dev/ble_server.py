@@ -45,6 +45,44 @@ class BLEServer:
         self.characteristic = None
         self.createService()
         
+    def start(self)->None:
+        asyncio.run(self.run_loop())
+        
+    async def run_loop(self)->None:
+        while True:
+            try:
+                if self.is_connected():
+                    await self.send_message()
+                    await asyncio.sleep_ms(self.send_interval_ms)
+                else:
+                    await self.connect_to_client()
+            except Exception as e:
+                print(f'Exception: {e}')
+                self.connection = None          
+                
+    def is_connected(self)->bool:
+        return not self.connection == None and self.connection.is_connected() 
+             
+        
+    async def send_message(self)->None:
+        message_str = 'x'
+        if not self.send_message_func == None:
+            message_str = self.send_message_func()
+        message = bytearray(message_str, 'utf-8')
+        self.characteristic.write(message)
+        self.characteristic.notify(self.connection, message)
+        
+    async def connect_to_client(self)->None:
+        print('Advertising...',end='')
+        self.connection = await aioble.advertise(
+                1000, 
+                name=self.name, 
+                appearance=_BLE_APPEARANCE_GENERIC_REMOTE_CONTROL, 
+                services=[self.service_uuid]
+        )
+        print("connected to:", self.connection.device)
+        print(f'Is connected: {self.connection.is_connected()}')
+        
     def createService(self):
         """Create the service and characteristic for the BLE server and registers
         the service. This function is called during initialization.
@@ -59,68 +97,7 @@ class BLEServer:
         )
         aioble.register_services(service)
     
-    async def advertise(self, interval_ms:int=250_000)->None:
-        """Advertise the BLE server. This function is called by the start function.
-        If the server is disconnected, it will resume advertising.
-
-        Args:
-            interval_ms (int, optional): Interval of advertising, ms. Defaults to 250_000.
-        """
-        print('advertise')
-        while True:
-            print('start advertising')
-            async with await aioble.advertise(
-                interval_ms, 
-                name=self.name, 
-                appearance=_BLE_APPEARANCE_GENERIC_REMOTE_CONTROL, 
-                services=[self.service_uuid]
-            ) as self.connection:
-                print("connection from", self.connection.device)
-                self.connected = True
-                await self.connection.disconnected()
-                self.connected = False
-                print(f'disconnected')
-    
-    async def send_message(self)->None:
-        """Send a message at regular intervals. The message is created by the send_message_func
-        """
-        while True:
-            if self.connected:
-                print('send_message')
-                message_str = ''
-                if not self.send_message_func == None:
-                    print('calling update_func')
-                    message_str = self.send_message_func()
-                message = bytearray(message_str, 'utf-8')
-                self.characteristic.write(message)
-                self.characteristic.notify(self.connection, message)
-            await asyncio.sleep_ms(self.send_interval_ms)
-    
-            
-    async def start(self)->None:
-        """Start the BLE server. This function creates two tasks: advertise and send_message.
-        """
-        print('start')
-        tasks = [
-            asyncio.create_task(self.advertise()),
-            asyncio.create_task(self.send_message()),
-        ]
-        await asyncio.gather(*tasks)
-    
-    
-    
-async def main()->None:
-    """Test Method
-    """
-    bleServer = BLEServer('BLE Test')
-    await bleServer.start()
-    
     
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except:
-        print(f'End')
-        
-        
-    
+    bleServer = BLEServer('BLE Test')
+    bleServer.start()
