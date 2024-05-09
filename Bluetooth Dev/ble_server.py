@@ -21,7 +21,7 @@ class BLEServer:
     
     def __init__(self,
                  name:str,
-                 send_message_func=None,
+                 create_message_func=None,
                  send_interval_ms:int=1000,
                  service_uuid:bluetooth.UUID=_GENERIC_SERVICE_UUID,
                  char_uuid:bluetooth.UUID=_GENERIC_CHAR_UUID)->None:
@@ -29,14 +29,14 @@ class BLEServer:
 
         Args:
             name (str): Name of the BLE server. This is used by the client to recognize the server.
-            send_message_func (_type_, optional): User-proviced function that provides a string to 
+            create_message_func (_type_, optional): User-proviced function that provides a string to 
                 be sent by the server. Defaults to None.
             send_interval_ms (int, optional): Interval between sends, in ms. Defaults to 1000.
             service_uuid (UUID, optional): Service UUID. Defaults to _GENERIC_SERVICE_UUID.
             char_uuid (UUID, optional): Characteristic UUID. Defaults to _GENERIC_CHAR_UUID.
         """
         self.name = name
-        self.send_message_func = send_message_func
+        self.create_message_func = create_message_func
         self.send_interval_ms = send_interval_ms
         self.service_uuid = service_uuid
         self.char_uuid = char_uuid
@@ -61,16 +61,36 @@ class BLEServer:
                 self.connection = None          
                 
     def is_connected(self)->bool:
+        """Determine if the server is connected to a client.
+
+        Returns:
+            bool: true if connected, false otherwise
+        """
         return not self.connection == None and self.connection.is_connected() 
              
-        
     async def send_message(self)->None:
+        """Send a message to the client. The message is created by calling the 
+        create_message_func
+        """
         message_str = 'x'
-        if not self.send_message_func == None:
-            message_str = self.send_message_func()
+        if not self.create_message_func == None:
+            message_str = self.create_message_func()
         message = bytearray(message_str, 'utf-8')
         self.characteristic.write(message)
         self.characteristic.notify(self.connection, message)
+        
+    def create_message_(self)->str:
+        """Function that creates a message to be sent by the server. 2 ways to do this:
+        1. Override this function with a subclass
+        2. Provide a function to the constructor
+
+        Returns:
+            str: message to be sent
+        """
+        if self.create_message_func == None:
+            return 'x'
+        else:
+            return self.create_message_func()
         
     async def connect_to_client(self)->None:
         print('Advertising...',end='')

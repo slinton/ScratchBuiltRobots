@@ -19,6 +19,6 @@ def button_pressed():
 while True:
     server = BLEServer(
             name='BLE Test',
-            send_message_func=button_pressed,
+            create_message_func=button_pressed,
             send_interval_ms=1000)
     server.start()
