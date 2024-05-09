@@ -67,12 +67,12 @@ class JoystickController(BLEServer):
         rx0 = 0
         ry0 = 0
         
-        for _ in range(10):
+        for _ in range(5):
             lx0 += self.left_pins["x"].read_u16()
             ly0 += self.left_pins["y"].read_u16()
             rx0 += self.right_pins["x"].read_u16()
             ry0 += self.right_pins["y"].read_u16()
-            sleep(0.1)
+            sleep(0.2)
             
         lx0 //= 10
         ly0 //= 10
