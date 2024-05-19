@@ -6,8 +6,8 @@ from time import sleep
 from ble_server import BLEServer
 
 class JoystickController(BLEServer):
-    """Class for joystick controller. The controller as two joysticks, each with x, y 
-    and button.
+    """Class for joystick controller. The controller has two joysticks, each with x, y 
+    and button. It is up to the client to interpret the data. The data is sent as a string.
     """
     
     def __init__(self, 
@@ -15,7 +15,15 @@ class JoystickController(BLEServer):
                  right_pin_nums,
                  debug:bool=False
                  )->None:
-        """Constructor
+        """Initialize JoystickController
+        Args:
+            left_pin_nums: Tuple with pin numbers for left joystick. The tuple should contain
+                           three integers, where the first two are the ADC pins for x and y
+                           and the third is the button pin.
+            right_pin_nums: Tuple with pin numbers for right joystick. The tuple should contain
+                            three integers, where the first two are the ADC pins for x and y
+                            and the third is the button pin.
+            debug: If True, print debug information
         """
         BLEServer.__init__(self, 
                            name="JoystickController",
@@ -43,45 +51,10 @@ class JoystickController(BLEServer):
             print(message)
         return message
     
-    # TODO
-    def convert(self, input:int)->int:
-        """Convert value from 0-
-        """
-        # TODO: Implement this function
-        input_min = 0
-        input_max = 65_535
-        output_min = -100
-        output_max = 100
-        output = (input - input_min) * (output_max - output_min) / (input_max - input_min) + output_min
-        if self.debug:
-            print(f'input: {input}, output: {output}')
-        return output
-    
-    # TODO
-    def zero(self)->None:
-        """Zero joystick values
-        """
-        print('Zeroing joystick...', end='')
-        lx0 = 0
-        ly0 = 0
-        rx0 = 0
-        ry0 = 0
-        
-        for _ in range(5):
-            lx0 += self.left_pins["x"].read_u16()
-            ly0 += self.left_pins["y"].read_u16()
-            rx0 += self.right_pins["x"].read_u16()
-            ry0 += self.right_pins["y"].read_u16()
-            sleep(0.2)
-            
-        lx0 //= 10
-        ly0 //= 10
-        rx0 //= 10
-        ry0 //= 10
-        print(f' Done: {lx0}, {ly0}, {rx0}, {ry0}')
-            
-            
-    
+
 if __name__ == "__main__":
-    joystickController = JoystickController((32, 33, 34), (35, 36, 37))
-    joystickController.start()
+    joystickController = JoystickController((16, 17, 18), (28, 27, 26), debug=True)
+    while True:
+        message = joystickController.create_message()
+        print(message)
+        sleep(0.1)
