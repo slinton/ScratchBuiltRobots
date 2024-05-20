@@ -18,13 +18,14 @@ class JoystickController(BLEServer):
         self.debug = debug
         
     def create_message(self)-> str:
-        ch0 = self.adc.read(self.rate, 0)
-        ch1 = self.adc.read(self.rate, 1)
-        ch2 = self.adc.read(self.rate, 2)
-        ch3 = self.adc.read(self.rate, 3)
+        ch0 = hex(self.adc.read(self.rate, 0))[2:]
+        ch1 = hex(self.adc.read(self.rate, 1))[2:]
+        ch2 = hex(self.adc.read(self.rate, 2))[2:]
+        ch3 = hex(self.adc.read(self.rate, 3))[2:]
         left_value = 1 - self.left_button.value()
         right_value = 1 - self.right_button.value()
-        message = f'{ch0}, {ch1}, {ch2}, {ch3}, {left_value}, {right_value}'
+        button_code = left_value + 2 * right_value
+        message = f'{ch0},{ch1},{ch2},{ch3},{button_code}'
         return message
 
 
@@ -33,3 +34,4 @@ if __name__ == '__main__':
     joystickController = JoystickController(i2c=i2c, left=18, right=28, debug=True)
     joystickController.start()
     
+
