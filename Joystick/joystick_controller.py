@@ -1,60 +1,35 @@
 #
 # JoystickController
 #
-from machine import Pin, ADC
-from time import sleep
+from machine import Pin, I2C
+from ads1x15 import ADS1115
 from ble_server import BLEServer
+from time import sleep
 
 class JoystickController(BLEServer):
-    """Class for joystick controller. The controller has two joysticks, each with x, y 
-    and button. It is up to the client to interpret the data. The data is sent as a string.
-    """
-    
-    def __init__(self, 
-                 left_pin_nums, 
-                 right_pin_nums,
-                 debug:bool=False
-                 )->None:
-        """Initialize JoystickController
-        Args:
-            left_pin_nums: Tuple with pin numbers for left joystick. The tuple should contain
-                           three integers, where the first two are the ADC pins for x and y
-                           and the third is the button pin.
-            right_pin_nums: Tuple with pin numbers for right joystick. The tuple should contain
-                            three integers, where the first two are the ADC pins for x and y
-                            and the third is the button pin.
-            debug: If True, print debug information
-        """
+    def __init__(self, i2c, left, right, debug)-> None:
         BLEServer.__init__(self, 
                            name="JoystickController",
-                           send_interval_ms=100)
+                           send_interval_ms=1000)
+        self.left_button = Pin(left, Pin.IN, Pin.PULL_UP)
+        self.right_button = Pin(right, Pin.IN, Pin.PULL_UP)
+        self.adc = ADS1115(i2c, address=72, gain=1)
+        self.rate = 4
+        self.debug = debug
         
-        self.left_pins = { "x": ADC(left_pin_nums[0]),
-                           "y": ADC(left_pin_nums[1]),
-                           "button": Pin(left_pin_nums[2], Pin.IN, Pin.PULL_UP)}
-        
-        self.right_pins = { "x": ADC(right_pin_nums[0]),
-                            "y": ADC(right_pin_nums[1]),
-                            "button": Pin(right_pin_nums[2], Pin.IN, Pin.PULL_UP)}
-        
-    def create_message(self)->str:
-        """Create message with joystick data
-        """
-        lx = self.convert(self.left_pins["x"].read_u16())
-        ly = self.convert(self.left_pins["y"].read_u16())
-        lb = self.left_pins["button"].value()
-        rx = self.convert(self.right_pins["x"].read_u16())
-        ry = self.convert(self.right_pins["y"].read_u16())
-        rb = self.right_pins["button"].value()
-        message = f'{lx},{ly},{lb},{rx},{ry},{rb}'
-        if self.debug:
-            print(message)
+    def create_message(self)-> str:
+        ch0 = self.adc.read(self.rate, 0)
+        ch1 = self.adc.read(self.rate, 1)
+        ch2 = self.adc.read(self.rate, 2)
+        ch3 = self.adc.read(self.rate, 3)
+        left_value = 1 - self.left_button.value()
+        right_value = 1 - self.right_button.value()
+        message = f'{ch0}, {ch1}, {ch2}, {ch3}, {left_value}, {right_value}'
         return message
-    
 
-if __name__ == "__main__":
-    joystickController = JoystickController((16, 17, 18), (28, 27, 26), debug=True)
-    while True:
-        message = joystickController.create_message()
-        print(message)
-        sleep(0.1)
+
+if __name__ == '__main__':
+    i2c = I2C(1, scl=27, sda=26, freq=200_000)
+    joystickController = JoystickController(i2c=i2c, left=18, right=28, debug=True)
+    joystickController.start()
+    
