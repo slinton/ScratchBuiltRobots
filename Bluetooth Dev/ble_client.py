@@ -7,7 +7,6 @@ import uasyncio as asyncio
 
 _GENERIC_SERVICE_UUID = bluetooth.UUID(0x1848) # data service UUID
 _GENERIC_CHAR_UUID = bluetooth.UUID(0x2A6E) # characteristic UUID
-
 _REMOTE_CHARACTERISTICS_UUID = bluetooth.UUID(0x2A6E)
 
 class BLEClient:
@@ -19,7 +18,7 @@ class BLEClient:
                  receive_message_func = None,
                  receive_interval_ms:int = 1000,
                  service_uuid:bluetooth.UUID = _GENERIC_SERVICE_UUID,
-                 char_uuid:bluetooth.UUID = _GENERIC_CHAR_UUID)->None:
+                 char_uuid:bluetooth.UUID = _GENERIC_CHAR_UUID)-> None:
         """Initialize the BLEClient object.
 
         Args:
@@ -38,36 +37,41 @@ class BLEClient:
         self.connection = None
         self.characteristic = None
         
-    def start(self)->None:
+    def start(self)-> None:
         asyncio.run(self.run_loop())
         
-    async def run_loop(self)->None:
+    async def run_loop(self)-> None:
         while True:
-            try:
-                if self.is_connected():
-                    await self.receive_message()
-                    await asyncio.sleep_ms(self.receive_interval_ms)
-                else:
-                    await self.connect_to_server()
-            except Exception as e:
-                print(f'Exception: {e}')
-                self.connection = None
-        
+            await self.update()
+            await asyncio.sleep_ms(self.receive_interval_ms)
+                
+    async def update(self)-> None:
+        try:
+            if self.is_connected():
+                self.show_connected(True)
+                await self.receive_message()
+            else:
+                self.show_connected(False)
+                await self.connect_to_server()
+        except Exception as e:
+            print(f'Exception: {e}')
+            self.connection = None
+                    
+    def show_connected(self, connected: bool)-> None:
+        """Subclasses over ride this to show state of connecton"""
+        pass
+               
     def is_connected(self)->bool:
         return not self.connection == None and self.connection.is_connected() 
-        
 
-                
-    async def receive_message(self)->None:
+    async def receive_message(self)-> None:
         message = await self.characteristic.read()
         message_str = message.decode('utf-8')
-        print(f'Receive message: {message_str}')
         
         if self.receive_message_func:
             self.receive_message_func(message_str)
-        
                 
-    async def connect_to_server(self)->None:
+    async def connect_to_server(self)-> None:
         device = await self.find_server()
                     
         self.connection = await device.connect()
@@ -98,3 +102,4 @@ class BLEClient:
 if __name__ == "__main__":
     client = BLEClient("BLE Test")
     client.start()
+
