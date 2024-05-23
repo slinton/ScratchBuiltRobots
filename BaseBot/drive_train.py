@@ -16,14 +16,14 @@ class DriveTrain:
     
     """
     
-    MAX_DUTY_CYCLE = 65535
+    MAX_DUTY_CYCLE: int = 65535
     
-    def __init__(self, 
-                 left_1_pin_num, 
-                 left_2_pin_num, 
-                 right_1_pin_num, 
-                 right_2_pin_num, 
-                 frequency=20000)-> None: 
+    def __init__(self, left_pins, right_pins, frequency: int=20_000)-> None: 
+#                  left_1_pin_num: int, 
+#                  left_2_pin_num: int, 
+#                  right_1_pin_num: int, 
+#                  right_2_pin_num: int, 
+#                  frequency: int=20_000)-> None: 
         """Initialize the DriveTrain object with the pins for the motors. Optionally 
         set the frequency of the PWM signal.
 
@@ -36,10 +36,14 @@ class DriveTrain:
         """
         
         # Create the PWM objects for the motor driver
-        self.left_1 = PWM(Pin(left_1_pin_num, Pin.OUT))
-        self.left_2 = PWM(Pin(left_2_pin_num, Pin.OUT))
-        self.right_1 = PWM(Pin(right_1_pin_num, Pin.OUT))
-        self.right_2 = PWM(Pin(right_2_pin_num,Pin.OUT))
+        self.left_1 = PWM(Pin(left_pins[0], Pin.OUT))
+        self.left_2 = PWM(Pin(left_pins[1], Pin.OUT))
+        self.right_1 = PWM(Pin(right_pins[0], Pin.OUT))
+        self.right_2 = PWM(Pin(right_pins[1], Pin.OUT))
+#         self.left_1 = PWM(Pin(left_1_pin_num, Pin.OUT))
+#         self.left_2 = PWM(Pin(left_2_pin_num, Pin.OUT))
+#         self.right_1 = PWM(Pin(right_1_pin_num, Pin.OUT))
+#         self.right_2 = PWM(Pin(right_2_pin_num,Pin.OUT))
         
         # Set the frequency of the PWM signal
         self.left_1.freq(frequency)
@@ -60,14 +64,14 @@ class DriveTrain:
             self.left_2.duty_u16(0)
         else:
             self.left_1.duty_u16(0)
-            self.left_2.duty_u16(self._speed_to_duty_cycle(left_speed))
+            self.left_2.duty_u16(self._speed_to_duty_cycle(-left_speed))
             
         if right_speed > 0:
             self.right_1.duty_u16(self._speed_to_duty_cycle(right_speed))
             self.right_2.duty_u16(0)
         else:
             self.right_1.duty_u16(0)
-            self.right_2.duty_u16(self._speed_to_duty_cycle(right_speed))
+            self.right_2.duty_u16(self._speed_to_duty_cycle(-right_speed))
         
     def forward(self, speed: int)-> None:
         """Drive the robot forward at a given speed.
@@ -147,49 +151,58 @@ class DriveTrain:
 if __name__ == "__main__":
     print('Testing DriveTrain class')
     # Create the DriveTrain object
-    dt = DriveTrain(15, 13, 2, 0)
+    dt = DriveTrain((1, 2), (3, 4))
     print(repr(dt))
     
     # Test the forward method
     print("Testing forward method")
-    dt.forward(50)
+    dt.forward(100)
+    dt.print_state()
     sleep(2)
     
     # Test the backward method
     print("Testing backward method")
-    dt.backward(50)
+    dt.backward(100)
+    dt.print_state()
     sleep(2)
     
     # Test the turn_left method
     print("Testing turn_left method")
-    dt.turn_left(50)
+    dt.turn_left(100)
+    dt.print_state()
     sleep(2)
     
     # Test the turn_right method
     print("Testing turn_right method")
-    dt.turn_right(50)
+    dt.turn_right(100)
+    dt.print_state()
     sleep(2)
     
     # Test the stop method
     print("Testing stop method")
     dt.stop()
+    dt.print_state()
     sleep(2)
     
     # Test the move method
     print("Testing move method")
-    dt.move(50, 50)
+    dt.move(100, 100)
+    dt.print_state()
     sleep(2)
     
     print("Testing stop method")
     dt.stop()
+    dt.print_state()
     sleep(2)
     
     print("Test swerve left")
-    dt.move(50, 100)
+    dt.move(75, 100)
+    dt.print_state()
     sleep(2)
     
     print("Test swerve right")
-    dt.move(100, 50)
+    dt.move(100, 75)
+    dt.print_state()
     sleep(2)
     
     dt.stop()
